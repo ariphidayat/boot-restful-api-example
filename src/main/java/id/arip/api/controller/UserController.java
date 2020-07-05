@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.Valid;
 import java.util.List;
 
 @RestController
@@ -17,7 +18,7 @@ public class UserController {
     private UserRepository userRepository;
 
     @PostMapping
-    public User createUser(@RequestBody User user) {
+    public User createUser(@Valid @RequestBody User user) {
         return userRepository.save(user);
     }
 
@@ -33,7 +34,7 @@ public class UserController {
     }
 
     @PutMapping("/{id}")
-    public User updateUser(@RequestBody User inputUser, @PathVariable("id") int id) {
+    public User updateUser(@Valid @RequestBody User inputUser, @PathVariable("id") int id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(("User not found with id: " + id)));
 
@@ -53,5 +54,4 @@ public class UserController {
 
         return ResponseEntity.ok().build();
     }
-
 }

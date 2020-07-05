@@ -1,27 +1,60 @@
 package id.arip.api.exception;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.validation.BindException;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
-import java.util.Date;
+@RestControllerAdvice
+public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
-@ControllerAdvice
-public class ApiExceptionHandler {
+    @Autowired
+    ApiErrorBuilder apiErrorBuilder;
 
-    // Handling specific exception
-    @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<?> resourceNotFoundExceptionHandler(ResourceNotFoundException ex, WebRequest req){
-        ApiError error = new ApiError(new Date(), ex.getMessage(), req.getDescription(false));
-        return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
+    @Override
+    protected ResponseEntity<Object> handleExceptionInternal(
+            Exception ex, Object body, HttpHeaders headers, HttpStatus status, WebRequest request) {
+        final Object apiError;
+        if (body == null) {
+            apiError = apiErrorBuilder.createDefaultApiError(ex.getClass().getSimpleName(), ex.getMessage());
+        } else {
+            apiError = body;
+        }
+        return new ResponseEntity<>(apiError, headers, status);
     }
 
-    // Handling global exception
+    @Override
+    protected ResponseEntity<Object> handleMethodArgumentNotValid(
+            MethodArgumentNotValidException ex, HttpHeaders headers, HttpStatus status, WebRequest request) {
+        return handleBindingResult(ex, ex.getBindingResult(), headers, status, request);
+    }
+
+    @Override
+    protected ResponseEntity<Object> handleBindException(BindException ex, HttpHeaders headers, HttpStatus status, WebRequest request) {
+        return handleBindingResult(ex, ex.getBindingResult(), headers, status, request);
+    }
+
+    protected ResponseEntity<Object> handleBindingResult(
+            Exception ex, BindingResult bindingResult, HttpHeaders headers, HttpStatus status, WebRequest request) {
+        String errorCode = ex.getClass().getSimpleName();
+        ApiError apiError = apiErrorBuilder.createBindingResultApiError(errorCode, "Data validation failed", bindingResult);
+        return handleExceptionInternal(ex, apiError, headers, status, request);
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<Object> handleResourceNotFoundException(ResourceNotFoundException ex, WebRequest request) {
+        return handleExceptionInternal(ex, null, new HttpHeaders(), HttpStatus.NOT_FOUND, request);
+    }
+
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<?> ExceptionHandler(Exception ex, WebRequest req){
-        ApiError error = new ApiError(new Date(), ex.getMessage(), req.getDescription(false));
-        return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
+    public ResponseEntity<Object> handleSystemException(Exception ex, WebRequest request) {
+        return handleExceptionInternal(ex, null, new HttpHeaders(), HttpStatus.INTERNAL_SERVER_ERROR, request);
     }
 }

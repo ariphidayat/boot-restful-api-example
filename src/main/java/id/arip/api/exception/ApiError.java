@@ -1,15 +1,35 @@
 package id.arip.api.exception;
 
-import lombok.AllArgsConstructor;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;
 
-import java.util.Date;
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
-@AllArgsConstructor
 public class ApiError {
 
-    private Date date;
+    private String code;
+
     private String message;
-    private String description;
+
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private String target;
+
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private List<ApiError> details = new ArrayList<>();
+
+    public ApiError(String code, String message) {
+        this(code, message, null);
+    }
+
+    public ApiError(String code, String message, String target) {
+        this.code = code;
+        this.message = message;
+        this.target = target;
+    }
+
+    public void addDetail(ApiError detail) {
+        details.add(detail);
+    }
 }
